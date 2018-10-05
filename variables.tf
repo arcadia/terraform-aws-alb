@@ -133,6 +133,7 @@ variable "target_groups_defaults" {
   default = {
     "cookie_duration"                  = 86400
     "deregistration_delay"             = 300
+    "slow_start"                       = 0
     "health_check_interval"            = 10
     "health_check_healthy_threshold"   = 3
     "health_check_path"                = "/"
