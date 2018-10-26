@@ -60,20 +60,53 @@ resource "aws_lb_target_group" "main" {
   }
 }
 
-resource "aws_lb_listener" "frontend_http_tcp" {
-  load_balancer_arn = "${element(concat(aws_lb.application.*.arn, aws_lb.application_no_logs.*.arn), 0)}"
-  port              = "${lookup(var.http_tcp_listeners[count.index], "port")}"
-  protocol          = "${lookup(var.http_tcp_listeners[count.index], "protocol")}"
-  count             = "${var.logging_enabled ? var.http_tcp_listeners_count : 0}"
+# resource "aws_lb_listener" "frontend_http_tcp" {
+#   load_balancer_arn = "${element(concat(aws_lb.application.*.arn, aws_lb.application.*.arn), 0)}"
+#   port              = "${lookup(var.http_tcp_listeners[count.index], "port")}"
+#   protocol          = "${lookup(var.http_tcp_listeners[count.index], "protocol")}"
+#   count             = "${var.logging_enabled ? var.http_tcp_listeners_count : 0}"
+
+#   default_action {
+#     target_group_arn = "${aws_lb_target_group.main.*.id[lookup(var.http_tcp_listeners[count.index], "target_group_index", 0)]}"
+#     type             = "forward"
+#   }
+# }
+
+resource "aws_lb_listener" "frontend_http_tcp_forward" {
+  load_balancer_arn = "${element(concat(aws_lb.application.*.arn, list("")), 0)}"
+  port              = "${lookup(var.http_tcp_listeners_forward[count.index], "port")}"
+  protocol          = "${lookup(var.http_tcp_listeners_forward[count.index], "protocol")}"
+  count             = "${var.logging_enabled ? var.http_tcp_listeners_forward_count : 0}"
 
   default_action {
-    target_group_arn = "${aws_lb_target_group.main.*.id[lookup(var.http_tcp_listeners[count.index], "target_group_index", 0)]}"
+    target_group_arn = "${aws_lb_target_group.main.*.id[lookup(var.http_tcp_listeners_forward[count.index], "target_group_index", 0)]}"
     type             = "forward"
   }
 }
 
+resource "aws_lb_listener" "frontend_http_tcp_redirect" {
+  load_balancer_arn = "${element(concat(aws_lb.application.*.arn, list("")), 0)}"
+  port              = "${lookup(var.http_tcp_listeners_redirect[count.index], "port")}"
+  protocol          = "${lookup(var.http_tcp_listeners_redirect[count.index], "protocol")}"
+  count             = "${var.logging_enabled ? var.http_tcp_listeners_redirect_count : 0}"
+
+  default_action {
+    target_group_arn = "${aws_lb_target_group.main.*.id[lookup(var.http_tcp_listeners_redirect[count.index], "target_group_index", 0)]}"
+    type             = "redirect"
+
+    redirect {
+      host        = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_host", lookup(var.default_action_redirect_defaults, "host"))}"
+      path        = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_path", lookup(var.default_action_redirect_defaults, "path"))}"
+      port        = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_port", lookup(var.default_action_redirect_defaults, "port"))}"
+      protocol    = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_protocol", lookup(var.default_action_redirect_defaults, "protocol"))}"
+      query       = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_query", lookup(var.default_action_redirect_defaults, "query"))}"
+      status_code = "${lookup(var.http_tcp_listeners_redirect[count.index], "redirect_status_code", lookup(var.default_action_redirect_defaults, "status_code"))}"
+    }
+  }
+}
+
 resource "aws_lb_listener" "frontend_https" {
-  load_balancer_arn = "${element(concat(aws_lb.application.*.arn, aws_lb.application_no_logs.*.arn), 0)}"
+  load_balancer_arn = "${element(concat(aws_lb.application.*.arn, aws_lb.application.*.arn), 0)}"
   port              = "${lookup(var.https_listeners[count.index], "port")}"
   protocol          = "HTTPS"
   certificate_arn   = "${lookup(var.https_listeners[count.index], "certificate_arn")}"
